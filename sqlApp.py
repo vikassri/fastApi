@@ -4,7 +4,7 @@ from fastapi import FastAPI, Depends
 from pydantic import BaseModel, Field
 import databases
 import sqlalchemy
-import uvicorn
+import uvicorn, os
 from datetime import datetime
 
 # database url
@@ -22,6 +22,8 @@ register = sqlalchemy.Table(
     metadata,
     sqlalchemy.Column("id", sqlalchemy.Integer, primary_key=True),
     sqlalchemy.Column("name", sqlalchemy.String(500)),
+    sqlalchemy.Column("email", sqlalchemy.String(500)),
+    sqlalchemy.Column("password", sqlalchemy.String(500)),
     sqlalchemy.Column("date_created", sqlalchemy.DateTime())
 )
 
@@ -40,12 +42,16 @@ app = FastAPI()
 # input to API
 class RegisterIn(BaseModel):
     name: str = Field(...)
+    email: str =Field(...)
+    password: str = Field(...)
 
 
 # response model
 class Register(BaseModel):
     id: int
     name: str
+    email: str
+    password: str
     date_created: datetime
 
 
@@ -63,6 +69,8 @@ async def shutdown():
 async def create(r: RegisterIn = Depends()):
     query = register.insert().values(
         name=r.name,
+        email=r.email,
+        password=r.password,
         date_created=datetime.utcnow()
     )
     record_id = await database.execute(query)
@@ -76,6 +84,8 @@ async def create(id: int, r: RegisterIn = Depends()):  # query parameter
     query = register.insert().values(
         id=id,
         name=r.name,
+        email=r.email,
+        password=r.password,
         date_created=datetime.utcnow()
     )
     record_id = await database.execute(query)
@@ -102,7 +112,7 @@ async def get_all():
 async def update(id: int, r: RegisterIn = Depends()):
 
     query = register.update().where(register.c.id == id).values(
-        name=r.name,
+        password=r.password,
         date_created=datetime.utcnow(),
     )
     record_id = await database.execute(query)
@@ -116,6 +126,5 @@ async def delete(id: int):
     query = register.delete().where(register.c.id == id)
     return await database.execute(query)
 
-
 if __name__ == "__main__":
-    uvicorn.run(app, host="localhost", port=8000, workers=1, debug=True)
+    uvicorn.run(app, host=os.uname()[1], port=8000, workers=1)
